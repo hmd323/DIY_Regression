@@ -1,0 +1,69 @@
+---
+title: "PoissonRegression_Stat"
+author: "Hailie Dono"
+date: "2023-12-11"
+output: html_document
+---
+
+## Poisson Regression
+
+Loading any necessary packages...
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(MASS) # This is where we'll get our data from
+```
+
+
+Pulling up some count data...
+```{r}
+# Bringing ships data into our environment
+ships <- MASS::ships
+
+#  Checking what glm() gives us
+#summary(m1 <- glm(incidents ~ service + period, family="poisson", data=ships))
+
+```
+
+Our Function
+```{r}
+Poisson_Regression <- function(X, y){
+  
+# Our function to get probabilities
+  poisloglik <- function(X, y, beta) {
+  lambda <- exp(beta%*%t(X))
+  ll <- -sum(dpois(y, lambda, log = TRUE))
+  ll
+  }
+  
+# Initial betas
+  init <- rep(0,ncol(X))
+
+# Let's do optimization!  
+  OptimResult <- optim(par=init,fn=poisloglik,
+  X = X,
+  y = y, hessian = TRUE)
+  B <- OptimResult$par
+  hessian <- OptimResult$hessian
+  cholesky <- chol(hessian)
+  cholesky_inv <- chol2inv(cholesky)
+  se <- sqrt(diag(cholesky_inv))
+  Z  = B/se
+  p  = pnorm(abs(Z), lower = FALSE)*2
+  # Our function output
+  print(round(data.frame(B, se, Z, p), 4))
+
+}
+
+
+# Preparing data we generated to go in our poisson regression
+x = model.matrix(incidents~service+period, ships)
+y = ships$incidents
+
+# Compare output of our function
+Poisson_Regression(x,y)
+
+#  Checking what glm() gives us
+summary(m1 <- glm(incidents ~ service + period, family="poisson", data=ships))
+```
+

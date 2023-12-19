@@ -124,10 +124,10 @@ linear_reg <- function(y, x, data){
 ```
 
 
-Lets run it
+Let's run it
 ```{r}
 linear_reg(y="income", x=c("college","exam"), data = college)
 # Compare to lm() function
-#summary(m <- lm(income ~ college + exam, data = college2))
+summary(m <- lm(income ~ college + exam, data = college))
 ```
 

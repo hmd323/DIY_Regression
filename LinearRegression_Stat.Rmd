@@ -9,17 +9,6 @@ output:
 
 ## Linear Regression
 
-The main goal of regression is to model the expected value of Y conditional on the values of X as a linear function.
-
-The major assumptions of linear regression are:
-
-+ The true relationship between the covariates and the
-outcome is linear.
-
-+ The errors are normally distributed, homoscedastic
-(same variance), have mean zero and are uncorrelated
-with X.
-
 Loading any necessary packages...
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)

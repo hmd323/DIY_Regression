@@ -1,0 +1,144 @@
+---
+title: "Linear Regression"
+author: "Hailie Dono"
+date: "2023-11-21"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## Linear Regression
+
+The main goal of regression is to model the expected value of Y conditional on the values of X as a linear function.
+
+The major assumptions of linear regression are:
+
++ The true relationship between the covariates and the
+outcome is linear.
+
++ The errors are normally distributed, homoscedastic
+(same variance), have mean zero and are uncorrelated
+with X.
+
+Loading any necessary packages...
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(janitor)
+```
+
+
+```{r}
+# Creating dataset...
+income <- rnorm(10000,42,24)
+income[income<0] <- 0
+exam <- rnorm(10000,62,10)
+
+college <- data.frame(
+  income = income,
+  exam = exam,
+  college = ifelse(exam>70,1,0)
+)
+```
+
+Our Function
+```{r}
+
+linear_reg <- function(y, x, data){
+  covariates <- c("(Intercept)", x)
+  Y <- data[[y]]
+  x <- data[,x,drop = FALSE]
+  X <- cbind(1, x)
+  X <- as.matrix(X)
+  
+  ## Calculating coefficients
+  Estimate <- solve(t(X) %*% X) %*% (t(X) %*% Y)
+  Estimate <- round(Estimate,6)
+  
+  ## Calculating R-squared:
+  yhat <- X %*% Estimate # Predicted values
+  hat_u <- Y - yhat # Error term
+ Fivenum_Residuals <-  fivenum(hat_u) # five number summary of Residuals
+  
+  ResidualSS <- sum(hat_u^2)
+  TotalSS <- sum((Y-mean(Y))^2)
+  R2 <- 1-ResidualSS/TotalSS
+  Multiple_R2 <- round(R2,4) # Multiple R-squared: 0.6548
+  
+  n <- nrow(data)
+  p <- ncol(X)
+  adj.r.squared = 1 - (1 - R2) * ((n - 1)/(n-p-1))
+  Adjusted_R2 <- round(adj.r.squared,4) # Adjusted R-squared
+  
+  ## Calculating Residual Standard Error & Degrees of Freedom
+  df <- n - p # Degrees of Freedom
+  
+  RSE <- sqrt((ResidualSS)/(df))
+  RSE <- round(RSE,4) # Residual Standard Error
+  
+  ## Calculating Std. Error for each covariate
+  var.e <- ResidualSS/(n-p)
+  var.cor <- var.e*solve((t(X) %*% X))
+  StdError <- sqrt(diag(var.cor))
+  StdError <- round(StdError,6)
+
+
+  ## Calculating t value and pval for each covariate
+  tvalue <- Estimate/StdError
+  tvalue <- round(tvalue,3)
+  pvals <-round(1-pt(abs(tvalue), df=(n-2)), 8)*2
+  pvals <- round(pvals,6)
+
+  
+  ## Calculating the F-statistic
+  ExplainedSS <- TotalSS - ResidualSS
+  MeanSqError <- ExplainedSS/(p-1)
+  MeanSqRegress <- ResidualSS/(n - p)
+  Fstat <- MeanSqError/MeanSqRegress
+  round(Fstat,2) # F-statistic 20.86
+  
+  #Prep results
+  fivenum_sum <- matrix(nrow=2, ncol = 5, byrow = TRUE)
+  fivenum_sum[1,] <-c("Min", "1Q", "Median", "3Q", "Max")
+  fivenum_sum[2,] <- round(Fivenum_Residuals,4)
+  fivenum_sum <- fivenum_sum %>% row_to_names(row_number = 1)
+  
+                  #nrow=p+1
+  Coefs <- matrix(nrow=p+1, ncol = 5, byrow = TRUE)
+  Coefs[1,] <-c(" ", "Estimate", "Std. Error", "t value", "Pr(>|t|)")
+  Coefs <- Coefs %>% row_to_names(row_number = 1)
+  Coefs[,1] <-covariates
+  Coefs[,2] <- Estimate
+  Coefs[,3] <- StdError
+  Coefs[,4] <- tvalue
+  Coefs[,5] <- pvals
+  
+  print("Residuals:")
+  print(fivenum_sum)
+  
+  print("Coefficients:")
+  print(Coefs)
+  
+  print("Residual standard error:")
+  print(RSE)
+  
+  print("Multiple R-squared:")
+  print(Multiple_R2)
+  
+  print("Adjusted R-squared:")
+  print(Adjusted_R2)
+  
+  print("F-statistic:")
+  print(round(Fstat,2))
+}
+
+```
+
+
+Lets run it
+```{r}
+linear_reg(y="income", x=c("college","exam"), data = college)
+# Compare to lm() function
+#summary(m <- lm(income ~ college + exam, data = college2))
+```
+

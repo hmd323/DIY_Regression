@@ -1,0 +1,88 @@
+---
+title: "Negative Binomial Regression"
+author: "Hailie Dono"
+date: "2023-12-11"
+output: html_document
+---
+
+Loading any necessary packages...
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(haven)
+```
+
+Pulling up some count data...
+```{r}
+# Using attendance data on 314 high school juniors from two urban high schools from a UCLA's Statistical Methods and Data Analytics website
+dat <- read_dta("https://stats.idre.ucla.edu/stat/stata/dae/nb_data.dta")
+dat <- within(dat, {
+    prog <- factor(prog, levels = 1:3, labels = c("General", "Academic", "Vocational"))
+    id <- factor(id)
+})
+
+## Citation: 
+#NEGATIVE BINOMIAL REGRESSION | R DATA ANALYSIS EXAMPLES. 
+#from https://stats.oarc.ucla.edu/r/dae/negative-binomial-regression/
+#(accessed December 18, 2021).
+
+summary(m1 <- glm.nb(daysabs ~ math + prog, data = dat))
+```
+
+Our Function
+```{r}
+NegativeBinomial_Regression <- function(X, y) {
+  # Our function to get probabilities
+  negbinomloglik <- function(y, X, theta){
+  
+  beta <- theta[1:ncol(X)]
+  alpha <- theta[ncol(X) + 1]
+  
+  if(any(alpha<=0)) return(-length(y)*10^6)
+  if(any(1 + alpha * exp(beta %*% t(X))<=0)) return(-length(y)*10^6)
+  
+  logll <- y * log(alpha) + y *( beta %*% t(X) ) - (y + (1 / alpha ) ) * log( 1 + alpha * exp(beta %*% t(X))) + lgamma(y + (1 / alpha)) - lgamma ( y + 1)  - lgamma ( 1 / alpha)
+  
+  
+  logll <- sum( logll  )
+  
+  return(logll)
+  
+}
+
+  # Initial parameters
+  stval <- c(rep(0, ncol(X)), 0.1)
+
+  # Let's do optimization!
+  OptimResult <- optim(par = stval, 
+                       fn = negbinomloglik,
+                       X = X,
+                       y = y,
+                       control = list(fnscale = -1),
+                       method = "BFGS",
+                       hessian = TRUE)
+
+
+  # Calculate Hessian matrix
+  observed_info <- -OptimResult$hessian
+
+  # Calculate standard errors using observed information
+  se <- sqrt(diag(solve(observed_info)))
+  # results
+  B  = OptimResult$par
+  Z  = B/se
+  p  = pnorm(abs(Z), lower = FALSE)*2
+# Our function output
+  return(data.frame(Beta = B[1:4], SE = se[1:4], Z = Z[1:4], P = p[1:4]))
+  
+}
+
+
+# Preparing data 
+x = model.matrix(daysabs ~ math + prog, dat)
+y = dat$daysabs
+
+# Compare output of our function
+NegativeBinomial_Regression(x, y)
+
+```

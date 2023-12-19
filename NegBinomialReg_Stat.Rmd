@@ -34,7 +34,6 @@ Our Function
 NegativeBinomial_Regression <- function(X, y) {
   # Our function to get probabilities
   negbinomloglik <- function(y, X, theta){
-  
   beta <- theta[1:ncol(X)]
   alpha <- theta[ncol(X) + 1]
   
@@ -42,12 +41,8 @@ NegativeBinomial_Regression <- function(X, y) {
   if(any(1 + alpha * exp(beta %*% t(X))<=0)) return(-length(y)*10^6)
   
   logll <- y * log(alpha) + y *( beta %*% t(X) ) - (y + (1 / alpha ) ) * log( 1 + alpha * exp(beta %*% t(X))) + lgamma(y + (1 / alpha)) - lgamma ( y + 1)  - lgamma ( 1 / alpha)
-  
-  
-  logll <- sum( logll  )
-  
-  return(logll)
-  
+  ll <- sum( logll  )
+  ll
 }
 
   # Initial parameters

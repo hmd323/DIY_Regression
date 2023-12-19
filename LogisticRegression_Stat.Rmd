@@ -1,0 +1,111 @@
+---
+title: "Logistic Regression"
+author: "Hailie Dono"
+date: "2023-11-21"
+output: html_document
+---
+
+## Logistic Regression
+
+Loading any necessary packages...
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(janitor)
+library(palmerpenguins)
+
+penguins <- palmerpenguins::penguins
+```
+
+```{r}
+pen <- penguins
+pen$adelie <- ifelse(pen$species=="Adelie",1,0)
+
+# What we're trying to achieve
+summary(check <- glm(adelie ~ bill_length_mm + bill_depth_mm + flipper_length_mm , data = pen, family = binomial(link = 'logit')))
+```
+Prepping our data to run
+```{r}
+# Getting our data...
+# independent variables
+x1 = penguins$bill_length_mm
+x2 = penguins$bill_depth_mm
+x3 = penguins$flipper_length_mm
+
+# dependent variables
+y = as.integer(pen$adelie)
+
+# Removing NAs
+complete_cases <- complete.cases(x1, x2, x3, y)
+
+# Filtering data
+x1 <- x1[complete_cases]
+x2 <- x2[complete_cases]
+x3 <- x3[complete_cases]
+y <- y[complete_cases]
+
+length_y <- length(y)
+
+x0 = rep(1,length_y) #bias
+X = cbind(x0,x1,x2,x3)
+
+```
+
+
+Our Function
+```{r}
+Logistic_Regression <- function(X, y, threshold = 1e-10, max_iter = 100) {
+  
+  # Function to Calculate probabilities
+  calc_p <- function(X, beta) {
+    beta <- as.vector(beta)
+    return(exp(X %*% beta) / (1 + exp(X %*% beta)))}
+  
+  # Initial guess for beta
+  beta <- rep(0, ncol(X))
+  
+  # Initial value bigger than threshold
+  diff <- 10000 
+  # ensure we're not stuck in an infinite loop
+  iter_count <- 0
+  
+#Perform Newton-Raphson gradient descent
+  while(diff > threshold) { # check convergence
+    # Calculate probabilities using the current estimate of beta
+    p <- as.vector(calc_p(X, beta))
+    # Calculate matrix of weights W
+    W <- diag(p * (1 - p)) 
+    # Calculate the change in beta
+    beta_change <- solve(t(X) %*% W %*% X) %*% t(X) %*% (y - p)
+    # Update beta
+    beta <- beta + beta_change
+    # Calculate how much we changed beta by in this iteration 
+    # If this is less than the threshold then break the while loop 
+    diff <- sum(beta_change^2)
+    
+    # Check if we've hit the maximum number of iterations
+    iter_count <- iter_count + 1
+    if(iter_count > max_iter) {
+      stop("Not converging.")
+    }
+  }
+  
+  # Calculate standard errors, z-values, and p-values
+  p <- as.vector(calc_p(X, beta))
+  W <- diag(p * (1 - p))
+  var_beta <- solve(t(X) %*% W %*% X)
+  se <- sqrt(diag(var_beta))
+  z_values <- beta / se
+  p_values <- 2 * (1 - pnorm(abs(z_values)))
+  
+  # Print output/four column summary
+  coef <- c("(Intercept)" = beta[1], x1 = beta[2], x2 = beta[3], x3 = beta[4])
+  result <- list(coef = coef, se = se, z_values = z_values, p_values = p_values)
+  return(result)
+}
+
+# Checking our Results
+Logistic_Regression(X,y)
+```
+
+
